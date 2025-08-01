@@ -5,7 +5,7 @@ import os
 
 # Замени на свои данные
 CLIENT_ID = os.getenv("1d294952213a4564ac572f03ff08f916")
-CLIENT_SECRET = os getenv("3dd01c6a9c1146fc908865cd9caa77aa")
+CLIENT_SECRET = os.getenv("3dd01c6a9c1146fc908865cd9caa77aa")
 if not CLIENT_ID or not CLIENT_SECRET:
     print("Не заданы SPOTIFY_CLIENT_ID или SPOTIFY_CLIENT_SECRET")
     sp=None
