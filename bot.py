@@ -119,7 +119,7 @@ def run_bot():
         print(f"❌ Ошибка запуска бота: {e}")
 
 # === Запуск Flask + Bot ===
-if name == "main":
+if __name__ == "__main__":
     # Запускаем бота в фоновом потоке
     threading.Thread(target=run_bot, daemon=True).start()
     # Запускаем Flask на порту, который указывает Render
