@@ -18,7 +18,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout)
     ]
 )
-logger = logging.getLogger(name)
+logger = logging.getLogger(__name__)
 
 # Получение токена из переменных окружения
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
