@@ -1,5 +1,0 @@
-python-telegram-bot==20.6
-yt-dlp
-spotipy
-mutagen
-Flask==2.3.3
