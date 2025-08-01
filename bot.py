@@ -2,13 +2,8 @@
 import os
 import logging
 import sys
-from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, CallbackContext
-
-# Загрузка переменных окружения из .env файла
-load_dotenv()
-
 # Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
