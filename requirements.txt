@@ -3,4 +3,3 @@ yt-dlp
 spotipy
 mutagen
 ffmpeg-python
-python-dotenv
