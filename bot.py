@@ -17,7 +17,7 @@ if not TOKEN:
     raise EnvironmentError("❌ ОШИБКА: Не задан TELEGRAM_BOT_TOKEN в переменных окружения")
 
 # Создаём Flask-приложение (для Render)
-flask_app = Flask(name)
+flask_app = Flask(__name__)
 
 @flask_app.route('/')
 def home():
