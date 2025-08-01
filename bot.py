@@ -16,7 +16,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Получение токена из переменных окружения
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TOKEN = os.getenv("8352917467:AAFcDYlYWWsMwWcMVu_zl9G2gAYZz5ch2ag")
 if not TOKEN:
     logger.critical("❌ ОШИБКА: TELEGRAM_BOT_TOKEN не задан в переменных окружения или файле .env")
     sys.exit(1)
