@@ -239,7 +239,7 @@ def main():
 
         logger.info("✅ Бот запущен и готов к работе!")
         # Запускаем бота
-        application.run_polling()
+        application.run_polling(drop_pending_updates=True)
         
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка запуска бота: {e}")
