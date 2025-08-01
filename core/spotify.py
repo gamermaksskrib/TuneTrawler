@@ -11,7 +11,7 @@ if not CLIENT_ID or not CLIENT_SECRET:
     sp=None
 else:
 try:
-    auth_manager = SpotifyClientCredentials(client_id=1d294952213a4564ac572f03ff08f916, client_secret=3dd01c6a9c1146fc908865cd9caa77aa)
+    auth_manager = SpotifyClientCredentials(client_id="1d294952213a4564ac572f03ff08f916", client_secret="3dd01c6a9c1146fc908865cd9caa77aa")
     sp = spotipy.Spotify(auth_manager=auth_manager)
 except Exception as e:
     print("Spotify API не доступен:", e)
