@@ -2,6 +2,8 @@
 import os
 import logging
 import sys
+import importlib.metadata
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
@@ -16,13 +18,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ✅ ПРАВИЛЬНО: Получаем токен по ключу
+# ✅ ПРАВИЛЬНО: Получаем токен по имени переменной
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
     logger.critical("❌ ОШИБКА: TELEGRAM_BOT_TOKEN не задан в переменных окружения")
     sys.exit(1)
 
-# Проверка наличия Spotify-ключей
+# Проверка наличия необходимых переменных для Spotify
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
@@ -34,10 +36,11 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
-    logger.info(f"Пользователь {update.effective_user.id} запустил бота")
+    user_id = update.effective_user.id
+    logger.info(f"Пользователь {user_id} запустил бота")
     
     welcome_message = (
-        "🎵 EchoirBot — ваш музыкальный помощник\n\n"
+        "🎵 **EchoirBot** — ваш музыкальный помощник\n\n"
         "Отправьте:\n"
         "• Название трека (например: *Bohemian Rhapsody*)\n"
         "• Ссылку на YouTube\n"
@@ -46,12 +49,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(welcome_message)
 
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик текстовых сообщений"""
     user_id = update.effective_user.id
     query = update.message.text.strip()
     logger.info(f"Пользователь {user_id} запросил: '{query}'")
     
+    # Проверка длины запроса
     if len(query) < 2:
         await update.message.reply_text("❌ Введите более полный запрос (минимум 2 символа).")
         return
@@ -64,13 +69,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             search_query = get_track_info_from_spotify(query)
             if not search_query:
                 logger.warning(f"Пользователь {user_id} отправил недействительную Spotify-ссылку: {query}")
-                await update.message.reply_text("❌ Не удалось извлечь данные из Spotify. Попробую поискать по названию...")
+                await update.message.reply_text(
+                    "❌ Не удалось извлечь данные из Spotify. Попробую поискать по названию..."
+                )
                 search_query = query
             else:
                 logger.info(f"Извлечено из Spotify: '{search_query}'")
         except Exception as e:
             logger.error(f"Ошибка обработки Spotify: {e}")
-            await update.message.reply_text("⚠️ Проблема с обработкой Spotify. Использую прямой поиск...")
+            await update.message.reply_text(
+                "⚠️ Проблема с обработкой Spotify. Использую прямой поиск..."
+            )
             search_query = query
     else:
         search_query = query
@@ -81,6 +90,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from core.downloader import search_youtube
         results = search_youtube(search_query, max_results=5)
         
+        # Проверка наличия результатов
         if not results:
             logger.info(f"По запросу '{search_query}' ничего не найдено")
             await update.message.reply_text(
@@ -92,9 +102,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        # Сохранение результатов
         context.user_data['results'] = results
         logger.info(f"Найдено {len(results)} результатов для '{search_query}'")
         
+        # Создание кнопок
         keyboard = []
         for i, track in enumerate(results):
             title = track['title'][:40] + "..." if len(track['title']) > 40 else track['title']
@@ -110,6 +122,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Попробуйте позже или измените запрос."
         )
 
+
 async def handle_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик выбора трека"""
     query = update.callback_query
@@ -119,9 +132,11 @@ async def handle_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Пользователь {user_id} выбрал трек")
     
     try:
+        # Извлечение индекса из callback_data
         idx = int(query.data.split("_")[1])
         results = context.user_data.get('results', [])
         
+        # Проверка корректности индекса
         if not results or idx >= len(results) or idx < 0:
             logger.warning(f"Пользователь {user_id} выбрал неверный индекс: {idx}")
             await query.edit_message_text("❌ Неверный выбор. Пожалуйста, начните поиск заново.")
@@ -131,6 +146,7 @@ async def handle_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"Скачивание трека: {track['title']} (ID: {track.get('id', 'N/A')})")
         await query.edit_message_text(f"🎧 Скачиваю: {track['title']}...")
 
+        # Скачивание трека
         from core.downloader import download_song
         result = download_song(track['url'], DOWNLOADS_DIR)
         
@@ -141,11 +157,13 @@ async def handle_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         file_path = result['file_path']
         
+        # Проверка существования файла
         if not os.path.exists(file_path):
             logger.error(f"Файл не найден: {file_path}")
             await query.message.reply_text("❌ Ошибка: файл не найден.")
             return
 
+        # Проверка размера файла (Telegram лимит 50 МБ)
         file_size = os.path.getsize(file_path)
         if file_size > 50 * 1024 * 1024:
             logger.warning(f"Файл слишком большой: {file_path} ({file_size} байт)")
@@ -153,6 +171,7 @@ async def handle_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
             os.remove(file_path)
             return
 
+        # Отправка аудио
         logger.info(f"Отправка аудио пользователю {user_id}: {file_path}")
         with open(file_path, 'rb') as audio:
             await query.message.reply_audio(
@@ -162,6 +181,7 @@ async def handle_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 duration=result['duration']
             )
 
+        # Удаление временного файла
         os.remove(file_path)
         logger.info(f"Временный файл удален: {file_path}")
 
@@ -174,18 +194,27 @@ async def handle_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• Проверить корректность запроса"
         )
 
+
 def main():
     """Запуск бота"""
     logger.info("========================================")
     logger.info("🚀 Запуск Echoir Telegram Bot")
-    logger.info(f"Версия python-telegram-bot: {Application.version}")
+    
+    # ✅ Исправлено: Получение версии python-telegram-bot
+    try:
+        ptb_version = importlib.metadata.version("python-telegram-bot")
+    except Exception:
+        ptb_version = "unknown"
+    
+    logger.info(f"Версия python-telegram-bot: {ptb_version}")
     logger.info(f"Токен бота: {TOKEN[:5]}...{TOKEN[-5:]}")
     logger.info(f"Папка для загрузок: {os.path.abspath(DOWNLOADS_DIR)}")
     
-    # Проверка зависимостей
+    # Проверка наличия необходимых модулей
     try:
         import yt_dlp
-        logger.info(f"yt-dlp версия: {yt_dlp.version.__version__}")
+        # ✅ Исправлено: Получение версии yt-dlp
+        logger.info(f"yt-dlp версия: {yt_dlp.__version__}")
     except ImportError:
         logger.critical("❌ ОШИБКА: yt-dlp не установлен. Выполните: pip install yt-dlp")
         sys.exit(1)
@@ -196,11 +225,12 @@ def main():
     except ImportError:
         logger.warning("⚠️ spotipy не установлен. Функционал Spotify будет ограничен.")
     
-    # Создание приложения
+    # Создание и настройка приложения
     try:
         application = Application.builder().token(TOKEN).build()
         logger.info("✅ Приложение Telegram инициализировано")
         
+        # Добавление обработчиков
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         application.add_handler(CallbackQueryHandler(handle_download))
@@ -208,12 +238,14 @@ def main():
         logger.info("✅ Обработчики добавлены")
         logger.info("🤖 Бот запущен. Ожидание сообщений...")
         
+        # Запуск бота
         application.run_polling()
         
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка запуска бота: {e}")
         sys.exit(1)
 
-# ✅ ПРАВИЛЬНО: __name__ с двумя подчёркиваниями
+
+# ✅ Исправлено: Два подчеркивания в __name__
 if __name__ == "__main__":
     main()
