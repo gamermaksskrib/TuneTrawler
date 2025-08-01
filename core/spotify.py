@@ -8,15 +8,14 @@ CLIENT_ID = os.getenv("1d294952213a4564ac572f03ff08f916")
 CLIENT_SECRET = os.getenv("3dd01c6a9c1146fc908865cd9caa77aa")
 if not CLIENT_ID or not CLIENT_SECRET:
     print("Не заданы SPOTIFY_CLIENT_ID или SPOTIFY_CLIENT_SECRET")
-    sp=None
-else:
+
+sp=None
+
 try:
     auth_manager = SpotifyClientCredentials(client_id="1d294952213a4564ac572f03ff08f916", client_secret="3dd01c6a9c1146fc908865cd9caa77aa")
     sp = spotipy.Spotify(auth_manager=auth_manager)
 except Exception as e:
     print("Spotify API не доступен:", e)
-    sp = None
-
 def get_track_info_from_spotify(url):
     if not sp:
         return None
